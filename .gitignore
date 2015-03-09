@@ -3,5 +3,5 @@ rel/introflection
 deps
 *~
 apps/introflection/priv/bower_components
-apps/introflection/priv/bower_components/dist
-apps/introflection/priv/bower_components/node_modules
+apps/introflection/priv/dist
+apps/introflection/priv/node_modules
