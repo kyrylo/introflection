@@ -1,0 +1,7 @@
+apps/introflection/ebin/*.beam
+rel/introflection
+deps
+*~
+apps/introflection/priv/bower_components
+apps/introflection/priv/bower_components/dist
+apps/introflection/priv/bower_components/node_modules

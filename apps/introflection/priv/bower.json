@@ -1,0 +1,22 @@
+{
+  "name": "introflection",
+  "version": "0.0.1",
+  "authors": [
+    "Kyrylo Silin <silin@kyrylo.org>"
+  ],
+  "license": "zlib",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "loglevel": "~1.2.0",
+    "three.js": "*",
+    "stats.js": "*",
+    "dat-gui": "~0.5.1"
+  }
+}

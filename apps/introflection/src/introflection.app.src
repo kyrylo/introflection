@@ -1,0 +1,14 @@
+{application, introflection, [
+    {description, ""},
+    {vsn, "1"},
+    {registered, [introflection_sup]},
+    {applications, [
+        kernel,
+        stdlib,
+        cowboy,
+        lager,
+        gproc
+    ]},
+    {mod, {introflection_app, []}},
+    {env, []}
+]}.

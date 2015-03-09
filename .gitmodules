@@ -1,0 +1,6 @@
+[submodule "apps/introflection/priv/static/introflection"]
+	path = apps/introflection/priv/static/introflection
+	url = /home/kyrylo/code/introflection_gl
+[submodule "apps/introflection/priv/static/gl"]
+	path = apps/introflection/priv/static/gl
+	url = /home/kyrylo/code/introflection_gl
