@@ -1021,20 +1021,57 @@ Introflection.GUI.prototype = {
 	}
 };
 
+// Source: src/Camera.js
+/*global Introflection,log,THREE*/
+
+Introflection.Camera = function() {
+	this.camera = new THREE.PerspectiveCamera(75, this.getAspect(), 1, 1000);
+	this.cameraControls = new THREE.OrbitControls(this.camera);
+};
+
+Introflection.Camera.prototype = {
+	constructor: Introflection.Camera,
+
+	start: function(renderFunc) {
+		this.camera.position.z = 10;
+		this.camera.position.y = 10;
+
+		this.cameraControls.damping = 0.2;
+		this.cameraControls.addEventListener('change', renderFunc);
+	},
+
+	update: function() {
+		this.cameraControls.update();
+	},
+
+	resize: function() {
+		this.setAspect();
+		this.camera.updateProjectionMatrix();
+	},
+
+	getAspect: function() {
+		return window.innerWidth / window.innerHeight;
+	},
+
+	setAspect: function() {
+		this.camera.aspect = this.getAspect();
+	}
+};
+
 // Source: src/Scene.js
 /*global Introflection,log,THREE*/
 
 Introflection.Scene = function(ws) {
-	var aspect = window.innerWidth / window.innerHeight;
+
 
 	this.ws = ws;
 
 	this.scene = new THREE.Scene();
 
 	this.container = document.getElementById('container');
-	this.camera = new THREE.PerspectiveCamera(75, aspect, 1, 1000);
+	this.camera = new Introflection.Camera();
 	this.renderer = new THREE.WebGLRenderer();
-	this.cameraControls = new THREE.OrbitControls(this.camera);
+
 
 	this.ambientLight = new THREE.AmbientLight(0x000044);
 	this.directionalLight = new THREE.DirectionalLight(0xffffff);
@@ -1066,14 +1103,9 @@ Introflection.Scene.prototype = {
 		this.directionalLight.position.set(1, 1, 1).normalize();
 		this.scene.add(this.directionalLight);
 
-		this.camera.position.z = 10;
-		this.camera.position.y = 10;
-
-		this.cameraControls.damping = 0.2;
-		this.cameraControls.addEventListener('change', this.render.bind(this));
-
 		this.stats.start();
 		this.gui.start();
+		this.camera.start(this.renderFunc());
 
 		this.animate.apply(this);
 	},
@@ -1092,16 +1124,14 @@ Introflection.Scene.prototype = {
 		windowHalfX = window.innerWidth / 2;
 		windowHalfY = window.innerHeight / 2;
 
-		this.camera.aspect = window.innerWidth / window.innerHeight;
-		this.camera.updateProjectionMatrix();
-
+		this.camera.resize();
 		this.setRendererSize();
 	},
 
 	animate: function() {
 		window.requestAnimationFrame(Introflection.Scene.prototype.animate.bind(this));
 		this.render();
-		this.cameraControls.update();
+		this.camera.update();
 		this.stats.update();
 	},
 
@@ -1115,7 +1145,12 @@ Introflection.Scene.prototype = {
 			this.drawHelpers(changed);
 		}
 
-		this.renderer.render(this.scene, this.camera);
+		this.renderer.render(this.scene, this.camera.camera);
+	},
+
+	renderFunc: function() {
+		var func = function() { this.render(); };
+		return func.bind(this);
 	},
 
 	drawHelpers: function(changed) {

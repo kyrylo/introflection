@@ -26,6 +26,7 @@ module.exports = function(grunt) {
 					'src/WebSocketConnection.js',
 					'src/Stats.js',
 					'src/GUI.js',
+					'src/Camera.js',
 					'src/Scene.js',
 					'src/App.js'
 				],
