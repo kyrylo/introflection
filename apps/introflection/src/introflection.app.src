@@ -5,6 +5,7 @@
     {applications, [
         kernel,
         stdlib,
+        mnesia,
         cowboy,
         lager,
         gproc
