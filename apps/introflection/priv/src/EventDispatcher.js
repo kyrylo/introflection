@@ -14,7 +14,7 @@ Introflection.EventDispatcher.prototype = {
 		event = JSON.parse(rawEvent.data);
 
 		switch (event.event) {
-		case 'module_added':
+		case 0:
 			module = new Introflection.Module(event);
 			module.display(this.scene, this.count);
 			this.count++;
