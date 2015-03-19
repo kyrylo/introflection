@@ -8,3 +8,4 @@ apps/introflection/priv/dist
 apps/introflection/priv/node_modules
 apps/introflection/logs
 *.beam
+apps/introflection/ebin
