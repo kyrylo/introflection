@@ -5,3 +5,5 @@ deps
 apps/introflection/priv/bower_components
 apps/introflection/priv/dist
 apps/introflection/priv/node_modules
+apps/introflection/logs
+*.beam
