@@ -3,9 +3,8 @@
 -behaviour(gen_server).
 
 -include("otp_types.hrl").
+-include("introflection.hrl").
 -include("logger.hrl").
-
--import(introflection_event, [parse/1]).
 
 %% API
 -export([start_link/0]).
@@ -19,6 +18,10 @@
 -define(TCP_OPTIONS, [binary, {packet, 0},
                       {reuseaddr, true},
                       {active, once}]).
+-define(EVENT_MODULE_ADDED, 0).
+-define(START_MESSAGE, "introflection").
+-define(END_MESSAGE, "\r\n").
+
 
 %% ===================================================================
 %% API functions
@@ -70,15 +73,30 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 
 listen() ->
-    {ok, ListenPort} = gen_tcp:listen(?TCP_PORT, ?TCP_OPTIONS),
-    ?INFO("Started listening on port ~p", [?TCP_PORT]),
-    accept(ListenPort).
+    case gen_tcp:listen(?TCP_PORT, ?TCP_OPTIONS) of
+        {ok, ListenSock} ->
+            ?INFO("Socket ~p has started listening on port ~p",
+                  [ListenSock, ?TCP_PORT]),
+            accept(ListenSock);
+        {error, Reason} ->
+            {error, Reason}
+    end.
 
-accept(ListenPort) ->
-    {ok, Socket} = gen_tcp:accept(ListenPort),
-    ?INFO("Accepted a new TCP connection"),
-    gen_tcp:controlling_process(Socket, spawn(fun() -> loop(Socket) end)),
-    accept(ListenPort).
+accept(ListenSock) ->
+    case gen_tcp:accept(ListenSock) of
+        {ok, Socket} ->
+            ?INFO("Socket ~p accepted a new TCP connection", [Socket]),
+            F = fun() -> loop(Socket) end,
+            case gen_tcp:controlling_process(Socket, spawn(F)) of
+                ok ->
+                    accept(ListenSock);
+                {error, Reason} ->
+                    ?ERROR("Error: ~p", [Reason])
+            end;
+        Other ->
+            ?ERROR("Accept returned ~w. Aborting!~n", [Other]),
+            ok
+    end.
 
 loop(Socket) ->
     loop(Socket, <<>>).
@@ -86,11 +104,58 @@ loop(Socket) ->
 loop(Socket, Rest) ->
     inet:setopts(Socket, [{active, once}]),
     receive
-        {tcp, Socket, Data} ->
-            loop(Socket, parse(<<Data/binary, Rest/binary>>));
-        {tcp_closed, Socket} ->
-            ?INFO("The TCP connection was closed"),
+        {tcp, S, Data} ->
+            loop(S, parse_message(<<Rest/binary, Data/binary>>));
+        {tcp_closed, S} ->
+            ?INFO("The TCP connection on socket ~p was closed", [S]),
             ok;
-        {tcp_error, Socket, Reason} ->
-            ?ERROR("Error on socket ~p reason: ~p~n", [Socket, Reason])
+        {tcp_error, S, Reason} ->
+            ?ERROR("Error on socket ~p reason: ~p~n", [S, Reason])
     end.
+
+parse_message(Bin) ->
+    case Bin of
+        <<?START_MESSAGE, Data/binary>> ->
+            case parse_event(Data) of
+                {nomatch, _Rest} ->
+                    Bin;
+                {match, Rest} ->
+                    parse_message(Rest)
+            end;
+        Rest ->
+            Rest
+    end.
+
+parse_event(Bin) ->
+    case Bin of
+        <<?EVENT_MODULE_ADDED, Data/binary>> ->
+            case parse_module_added(Data) of
+                {nomatch, _Rest} ->
+                    {nomatch, Bin};
+                {match, Rest} ->
+                    {match, Rest}
+            end;
+        Rest ->
+            Rest
+    end.
+
+parse_module_added(Bin) ->
+    case Bin of
+        <<DataSize:8/integer, Data:DataSize/binary, ?END_MESSAGE, Rest/binary>> ->
+            {ok, [Event]} = rmarshal:load(Data),
+            {ok, EventData} = maps:find(data, Event),
+            ok = introflection_module:add(
+                   maps:get(object_id, EventData),
+                   maps:get(name, EventData),
+                   maps:get(nesting, EventData),
+                   maps:get(parent, EventData)
+                  ),
+            %%broadcast(jiffy:encode(Event, [force_utf8])),
+            {match, Rest};
+        Rest ->
+            {nomatch, Rest}
+    end.
+
+broadcast(Data) ->
+    gproc:send({p, l, {introflection_websocket, ?WSBCAST}},
+               {self(), {introflection_websocket, ?WSBCAST}, Data}).

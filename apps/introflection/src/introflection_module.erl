@@ -3,10 +3,8 @@
 -include("mnesia_tables.hrl").
 -include("logger.hrl").
 
-
 %% API
 -export([init/1, install/1]).
-
 -export([add/4, find/1]).
 
 %% ===================================================================
@@ -47,6 +45,4 @@ find(ObjectId) ->
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.
 
-%% find_all_modules() ->
-%%     F = fun() ->
-%%                 mnesia
+%% find_chain(ObjectId) ->
