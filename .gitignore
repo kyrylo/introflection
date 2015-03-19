@@ -3,6 +3,7 @@ rel/introflection
 deps
 *~
 apps/introflection/priv/bower_components
+apps/introflection/.rebar
 apps/introflection/priv/dist
 apps/introflection/priv/node_modules
 apps/introflection/logs
