@@ -143,12 +143,12 @@ parse_module_added(Bin) ->
     case Bin of
         <<DataSize:8/integer, Data:DataSize/binary, ?END_MESSAGE, Rest/binary>> ->
             {ok, [Event]} = rmarshal:load(Data),
-            {ok, EventData} = maps:find(data, Event),
+            {ok, Module} = maps:find(data, Event),
             ok = introflection_module:add(
-                   maps:get(object_id, EventData),
-                   maps:get(name, EventData),
-                   maps:get(nesting, EventData),
-                   maps:get(parent, EventData)
+                   maps:get(object_id, Module),
+                   maps:get(name, Module),
+                   maps:get(nesting, Module),
+                   maps:get(parent, Module)
                   ),
             %%broadcast(jiffy:encode(Event, [force_utf8])),
             {match, Rest};
