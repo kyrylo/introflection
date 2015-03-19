@@ -8,8 +8,8 @@ Introflection.start = function() {
 	log.enableAll();
 
 	wsconnection = new Introflection.WebSocketConnection('ws://localhost:8080/ws');
-	wsconnection.start();
 
 	scene = new Introflection.Scene(wsconnection);
+	log.info("Initialising the scene...");
 	scene.init();
 };

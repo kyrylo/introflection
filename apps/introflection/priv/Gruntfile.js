@@ -20,7 +20,6 @@ module.exports = function(grunt) {
 					'lib/three.js/OrbitControls.js',
 					'src/Introflection.js',
 					'src/Grid.js',
-					'src/ModuleAddedEvent.js',
 					'src/Module.js',
 					'src/EventDispatcher.js',
 					'src/WebSocketConnection.js',
