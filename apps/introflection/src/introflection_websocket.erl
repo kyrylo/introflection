@@ -44,7 +44,7 @@ websocket_handle(_Data, Req, State) ->
 
 websocket_info(post_init, Req, State) ->
     MsgList = [{text, introflection_event:encode(Event) } ||
-                  Event <- introflection_event:all_module_added()],
+                  Event <- introflection_event:modadds()],
     {reply, MsgList, Req, State};
 websocket_info({_Pid, {_Module, ?WSBCAST}, Msg}, Req, State) ->
     {reply, {text, Msg}, Req, State};
