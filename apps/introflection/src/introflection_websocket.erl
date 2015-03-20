@@ -30,6 +30,7 @@ init(Req, Opts) ->
                     gproc:reg({p, l, {?MODULE, ?WSBCAST}}),
                     Req2 = cowboy_req:set_resp_header(<<?SECWSP>>, <<?SUBPROTO>>,
                                                       Req),
+                    self() ! post_init,
                     {cowboy_websocket, Req2, Opts};
                 false ->
                     {cowboy_websocket, Req, Opts}
@@ -41,6 +42,10 @@ websocket_handle({text, Msg}, Req, State) ->
 websocket_handle(_Data, Req, State) ->
     {ok, Req, State}.
 
+websocket_info(post_init, Req, State) ->
+    MsgList = [{text, introflection_event:encode(Event) } ||
+                  Event <- introflection_event:all_module_added()],
+    {reply, MsgList, Req, State};
 websocket_info({_Pid, {_Module, ?WSBCAST}, Msg}, Req, State) ->
     {reply, {text, Msg}, Req, State};
 websocket_info(_Info, Req, State) ->

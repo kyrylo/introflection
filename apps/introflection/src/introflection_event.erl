@@ -1,0 +1,49 @@
+-module(introflection_event).
+
+-include_lib("stdlib/include/qlc.hrl").
+
+-include("introflection.hrl").
+-include("mnesia_tables.hrl").
+-include("logger.hrl").
+
+%% API
+-export([init/1, install/1]).
+-export([encode/1, add_modadd/1, modadds/0]).
+
+init(Nodes) ->
+    {atomic, ok} = mnesia:create_table(introflection_events, [
+                       {type, set},
+                       {attributes, record_info(fields, introflection_events)},
+                       {ram_copies, Nodes}]).
+
+install(Nodes) ->
+    ok = mnesia:create_schema(Nodes),
+    application:start(mnesia),
+    init(Nodes),
+    application:stop(mnesia).
+
+encode(Data) ->
+    jiffy:encode(Data, [force_utf8]).
+
+add_modadd({ObjectId, Name, Nesting, Parent}) ->
+    F = fun () ->
+        ok = introflection_module:add(ObjectId, Name, Nesting, Parent),
+        mnesia:write(#introflection_events{type=?EVENT_MODULE_ADDED, ref=ObjectId})
+    end,
+    {atomic, ResultOfFun} = mnesia:transaction(F),
+    ResultOfFun.
+
+modadds() ->
+    F = fun() ->
+        Query = qlc:q(
+            [#{event => T, data => introflection_module:annotate(
+                                     introflection_module:find(Ref)
+                                    )} ||
+                #introflection_events{id=_Id,
+                                      type=T,
+                                      ref=Ref} <- mnesia:table(introflection_events),
+                T =:= ?EVENT_MODULE_ADDED]),
+        qlc:eval(Query)
+    end,
+    {atomic, ResultOfFun} = mnesia:transaction(F),
+    ResultOfFun.

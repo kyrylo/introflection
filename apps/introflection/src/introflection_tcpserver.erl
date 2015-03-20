@@ -18,10 +18,8 @@
 -define(TCP_OPTIONS, [binary, {packet, 0},
                       {reuseaddr, true},
                       {active, once}]).
--define(EVENT_MODULE_ADDED, 0).
 -define(START_MESSAGE, "introflection").
 -define(END_MESSAGE, "\r\n").
-
 
 %% ===================================================================
 %% API functions
@@ -143,19 +141,13 @@ parse_module_added(Bin) ->
     case Bin of
         <<DataSize:8/integer, Data:DataSize/binary, ?END_MESSAGE, Rest/binary>> ->
             {ok, [Event]} = rmarshal:load(Data),
-            {ok, Module} = maps:find(data, Event),
-            ok = introflection_module:add(
-                   maps:get(object_id, Module),
-                   maps:get(name, Module),
-                   maps:get(nesting, Module),
-                   maps:get(parent, Module)
-                  ),
-            %%broadcast(jiffy:encode(Event, [force_utf8])),
+            #{event := _Type, data := Module} = Event,
+            #{object_id := O, name := N, nesting := G, parent := P} = Module,
+            ok = introflection_event:add_modadd({O, N, G, P}),
+            gproc:send({p, l, {introflection_websocket, ?WSBCAST}},
+                       {self(), {introflection_websocket, ?WSBCAST},
+                        introflection_event:encode(Event)}),
             {match, Rest};
         Rest ->
             {nomatch, Rest}
     end.
-
-broadcast(Data) ->
-    gproc:send({p, l, {introflection_websocket, ?WSBCAST}},
-               {self(), {introflection_websocket, ?WSBCAST}, Data}).

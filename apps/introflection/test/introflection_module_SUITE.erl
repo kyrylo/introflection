@@ -6,10 +6,10 @@
          init_per_testcase/2, end_per_testcase/2,
          all/0]).
 
--export([add/1, find/1]).
+-export([add/1, find/1, annotate/1]).
 
 all() ->
-    [add, find].
+    [add, find, annotate].
 
 %% ===================================================================
 %% Callback functions
@@ -25,6 +25,7 @@ init_per_suite(Config) ->
 
 end_per_suite(_Config) ->
     application:stop(mnesia),
+    ok = mnesia:delete_schema([node()]),
     ok.
 
 init_per_testcase(_, Config) ->
@@ -47,3 +48,10 @@ find(_Config) ->
     {20035160, "BasicObject", 0, 20035120} = introflection_module:find(20035160),
     undefined = introflection_module:find("BasicObject"),
     undefined = introflection_module:find(make_ref()).
+
+annotate(_Config) ->
+    #{object_id := 123,
+      name := "Tesla",
+      nesting := 22,
+      parent := 321} = introflection_module:annotate({123, "Tesla", 22, 321}),
+   nil = introflection_module:annotate(123).

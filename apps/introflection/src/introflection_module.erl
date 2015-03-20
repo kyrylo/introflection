@@ -1,11 +1,10 @@
 -module(introflection_module).
 
 -include("mnesia_tables.hrl").
--include("logger.hrl").
 
 %% API
 -export([init/1, install/1]).
--export([add/4, find/1]).
+-export([add/4, find/1, annotate/1]).
 
 %% ===================================================================
 %% API functions
@@ -45,4 +44,10 @@ find(ObjectId) ->
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.
 
-%% find_chain(ObjectId) ->
+annotate({ObjectId, Name, Nesting, Parent}=Data) when is_tuple(Data)  ->
+    #{object_id => ObjectId,
+      name => Name,
+      nesting => Nesting,
+      parent => Parent};
+annotate(_) ->
+    nil.
