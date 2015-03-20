@@ -6,4 +6,4 @@ all:
 
 test:
 	(cd apps/introflection ; erl -make)
-	(cd apps/introflection ; ct_run -pa ebin/ -spec introflection.spec)
+	(cd apps/introflection ; ct_run -pa ebin/ ../../deps/*/ebin/ -spec introflection.spec)
