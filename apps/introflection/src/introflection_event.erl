@@ -4,6 +4,7 @@
 
 -include("introflection.hrl").
 -include("mnesia_tables.hrl").
+-include("events.hrl").
 -include("logger.hrl").
 
 %% API
@@ -39,7 +40,7 @@ encode(Data) ->
 add_modadd({ObjectId, Name, Nesting, Parent}) ->
     F = fun () ->
         ok = introflection_module:add(ObjectId, Name, Nesting, Parent),
-        mnesia:write(#introflection_events{type=?EVENT_MODULE_ADDED, ref=ObjectId})
+        mnesia:write(#introflection_events{type=?MODULE_ADDED, ref=ObjectId})
     end,
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.
@@ -53,7 +54,7 @@ modadds() ->
                 #introflection_events{id=_Id,
                                       type=T,
                                       ref=Ref} <- mnesia:table(introflection_events),
-                T =:= ?EVENT_MODULE_ADDED]),
+                T =:= ?MODULE_ADDED]),
         qlc:eval(Query)
     end,
     {atomic, ResultOfFun} = mnesia:transaction(F),

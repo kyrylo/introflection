@@ -1,6 +1,7 @@
 -module(introflection_message).
 
 -include("introflection.hrl").
+-include("events.hrl").
 -include("logger.hrl").
 
 -export([parse/1]).
@@ -26,7 +27,7 @@ parse(Bin, Events) ->
 
 parse_event(Bin) ->
     case Bin of
-        <<?EVENT_MODULE_ADDED, Data/binary>> ->
+        <<?MODULE_ADDED, Data/binary>> ->
             case parse_module_added(Data) of
                 {nomatch, _Rest} ->
                     {nomatch, Bin};
