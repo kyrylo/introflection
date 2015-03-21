@@ -8,7 +8,7 @@
 
 %% API
 -export([init/1, install/1]).
--export([encode/1, add_modadd/1, modadds/0]).
+-export([bulk_store/1, encode/1, add_modadd/1, modadds/0]).
 
 init(Nodes) ->
     {atomic, ok} = mnesia:create_table(introflection_events, [
@@ -21,6 +21,17 @@ install(Nodes) ->
     application:start(mnesia),
     init(Nodes),
     application:stop(mnesia).
+
+bulk_store([]) ->
+    ok;
+bulk_store([Event|Events]) ->
+    #{event := _Type, data := Module} = Event,
+    #{object_id := O, name := N, nesting := G, parent := P} = Module,
+    ok = introflection_event:add_modadd({O, N, G, P}),
+    gproc:send({p, l, {introflection_websocket, ?WSBCAST}},
+               {self(), {introflection_websocket, ?WSBCAST},
+                introflection_event:encode(Event)}),
+    bulk_store(Events).
 
 encode(Data) ->
     jiffy:encode(Data, [force_utf8]).

@@ -3,32 +3,28 @@
 -behaviour(gen_server).
 
 -include("otp_types.hrl").
--include("introflection.hrl").
 -include("logger.hrl").
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
 -define(SERVER, ?MODULE).
--define(TCP_PORT, 7331).
--define(TCP_OPTIONS, [binary, {packet, 0},
-                      {reuseaddr, true},
-                      {active, once}]).
--define(START_MESSAGE, "introflection").
--define(END_MESSAGE, "\r\n").
+
+-record(state, {socket,
+                leftover=nil}).
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
--spec(start_link() -> gs_init_reply()).
+-spec(start_link(socket()) -> gs_init_reply()).
 
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Socket) ->
+    gen_server:start_link(?MODULE, Socket, []).
 
 %% ===================================================================
 %% gen_server callbacks
@@ -36,10 +32,10 @@ start_link() ->
 
 -spec(init(gs_args()) -> gs_init_reply()).
 
-init([]) ->
+init(Socket) ->
     ?INFO("Spawning a TCP server"),
-    spawn(fun() -> listen() end),
-    {ok, {}}.
+    gen_server:cast(self(), accept),
+    {ok, #state{socket=Socket}}.
 
 -spec(handle_call(gs_request(), gs_from(), gs_reply()) -> gs_call_reply()).
 
@@ -48,11 +44,38 @@ handle_call(_Request, _From, State) ->
 
 -spec(handle_cast(gs_request(), gs_state()) -> gs_cast_reply()).
 
+handle_cast(accept, State = #state{socket=ListenSocket}) ->
+    case gen_tcp:accept(ListenSocket) of
+        {ok, AcceptSocket} ->
+            ?INFO("Socket ~p accepted a new TCP connection", [AcceptSocket]),
+            introflection_tcpserver_sup:start_socket(),
+            {noreply, State#state{socket=AcceptSocket}};
+        Other ->
+            ?ERROR("Accept returned ~w. Aborting!~n", [Other]),
+            ok
+    end;
+handle_cast({handle_events, Events}, State) ->
+    ok = introflection_event:bulk_store(Events),
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 -spec(handle_info(gs_request(), gs_state()) -> gs_info_reply()).
 
+handle_info({tcp, Socket, Data}, State = #state{leftover=Rest}) when Rest /= nil ->
+    {ok, NewState} = handle_streaming_data(<<Rest/binary, Data/binary>>, State),
+    inet:setopts(Socket, [{active, once}]),
+    {noreply, NewState};
+handle_info({tcp, Socket, Data}, State) ->
+    {ok, NewState} = handle_streaming_data(Data, State),
+    inet:setopts(Socket, [{active, once}]),
+    {noreply, NewState};
+handle_info({tcp_closed, Socket}, State) ->
+    ?INFO("The TCP connection on socket ~p was closed", [Socket]),
+    {stop, normal, State};
+handle_info({tcp_error, Socket, Reason}, State) ->
+    ?ERROR("Error on socket ~p reason: ~p~n", [Socket, Reason]),
+    {stop, normal, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -70,84 +93,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %% ===================================================================
 
-listen() ->
-    case gen_tcp:listen(?TCP_PORT, ?TCP_OPTIONS) of
-        {ok, ListenSock} ->
-            ?INFO("Socket ~p has started listening on port ~p",
-                  [ListenSock, ?TCP_PORT]),
-            accept(ListenSock);
-        {error, Reason} ->
-            {error, Reason}
-    end.
-
-accept(ListenSock) ->
-    case gen_tcp:accept(ListenSock) of
-        {ok, Socket} ->
-            ?INFO("Socket ~p accepted a new TCP connection", [Socket]),
-            F = fun() -> loop(Socket) end,
-            case gen_tcp:controlling_process(Socket, spawn(F)) of
-                ok ->
-                    accept(ListenSock);
-                {error, Reason} ->
-                    ?ERROR("Error: ~p", [Reason])
-            end;
-        Other ->
-            ?ERROR("Accept returned ~w. Aborting!~n", [Other]),
-            ok
-    end.
-
-loop(Socket) ->
-    loop(Socket, <<>>).
-
-loop(Socket, Rest) ->
-    inet:setopts(Socket, [{active, once}]),
-    receive
-        {tcp, S, Data} ->
-            loop(S, parse_message(<<Rest/binary, Data/binary>>));
-        {tcp_closed, S} ->
-            ?INFO("The TCP connection on socket ~p was closed", [S]),
-            ok;
-        {tcp_error, S, Reason} ->
-            ?ERROR("Error on socket ~p reason: ~p~n", [S, Reason])
-    end.
-
-parse_message(Bin) ->
-    case Bin of
-        <<?START_MESSAGE, Data/binary>> ->
-            case parse_event(Data) of
-                {nomatch, _Rest} ->
-                    Bin;
-                {match, Rest} ->
-                    parse_message(Rest)
-            end;
-        Rest ->
-            Rest
-    end.
-
-parse_event(Bin) ->
-    case Bin of
-        <<?EVENT_MODULE_ADDED, Data/binary>> ->
-            case parse_module_added(Data) of
-                {nomatch, _Rest} ->
-                    {nomatch, Bin};
-                {match, Rest} ->
-                    {match, Rest}
-            end;
-        Rest ->
-            Rest
-    end.
-
-parse_module_added(Bin) ->
-    case Bin of
-        <<DataSize:8/integer, Data:DataSize/binary, ?END_MESSAGE, Rest/binary>> ->
-            {ok, [Event]} = rmarshal:load(Data),
-            #{event := _Type, data := Module} = Event,
-            #{object_id := O, name := N, nesting := G, parent := P} = Module,
-            ok = introflection_event:add_modadd({O, N, G, P}),
-            gproc:send({p, l, {introflection_websocket, ?WSBCAST}},
-                       {self(), {introflection_websocket, ?WSBCAST},
-                        introflection_event:encode(Event)}),
-            {match, Rest};
-        Rest ->
-            {nomatch, Rest}
-    end.
+handle_streaming_data(Data, State) ->
+    {ok, {Events, Leftover}} = introflection_message:parse(Data),
+    gen_server:cast(self(), {handle_events, Events}),
+    {ok, State#state{leftover=Leftover}}.
