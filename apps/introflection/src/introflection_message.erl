@@ -35,7 +35,7 @@ parse_event(Bin) ->
                     {match, Event, Rest}
             end;
         Rest ->
-            Rest
+            {nomatch, Rest}
     end.
 
 parse_module_added(Bin) ->
