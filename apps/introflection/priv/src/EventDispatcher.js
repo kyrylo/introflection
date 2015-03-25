@@ -17,7 +17,7 @@ Introflection.EventDispatcher.prototype = {
 		case 0:
 			module = new Introflection.Module(event);
 			module.display(this.scene, this.count);
-			this.count++;
+			this.count += 1;
 			break;
 		}
 	}

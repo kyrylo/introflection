@@ -2,9 +2,6 @@
 
 -behaviour(gen_server).
 
--include("otp_types.hrl").
--include("logger.hrl").
-
 %% API
 -export([start_link/1]).
 
@@ -16,9 +13,13 @@
          terminate/2,
          code_change/3]).
 
+-include("otp_types.hrl").
+-include("logger.hrl").
+
 -define(SERVER, ?MODULE).
 
 -record(state, {socket,
+                scene_pid,
                 leftover=nil}).
 
 %% ===================================================================
@@ -53,13 +54,14 @@ handle_cast(accept, State = #state{socket=ListenSocket}) ->
         {ok, AcceptSocket} ->
             ?INFO("Socket ~p accepted a new TCP connection", [AcceptSocket]),
             introflection_tcpserver_sup:start_socket(),
-            {noreply, State#state{socket=AcceptSocket}};
+            {ok, ScenePid} = introflection_scene:start_link(),
+            {noreply, State#state{socket=AcceptSocket, scene_pid=ScenePid}};
         Other ->
             ?ERROR("Accept returned ~w. Aborting!~n", [Other]),
             ok
     end;
 handle_cast({handle_events, Events}, State) ->
-    ok = introflection_event:bulk_store(Events),
+    ok = introflection_event:bulk_store(State#state.scene_pid, Events),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.

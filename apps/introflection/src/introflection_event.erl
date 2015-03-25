@@ -1,15 +1,18 @@
 -module(introflection_event).
 
+%% API
+-export([init/1, install/1]).
+-export([bulk_store/2, store_event/3, modadds/0]).
+
 -include_lib("stdlib/include/qlc.hrl").
 
--include("introflection.hrl").
 -include("mnesia_tables.hrl").
 -include("events.hrl").
 -include("logger.hrl").
 
-%% API
--export([init/1, install/1]).
--export([bulk_store/1, encode/1, add_modadd/1, modadds/0]).
+%% ===================================================================
+%% API functions
+%% ===================================================================
 
 init(Nodes) ->
     {atomic, ok} = mnesia:create_table(introflection_events, [
@@ -23,24 +26,19 @@ install(Nodes) ->
     init(Nodes),
     application:stop(mnesia).
 
-bulk_store([]) ->
+bulk_store(_ScenePid, []) ->
     ok;
-bulk_store([Event|Events]) ->
-    #{event := _Type, data := Module} = Event,
-    #{object_id := O, name := N, nesting := G, parent := P} = Module,
-    ok = introflection_event:add_modadd({O, N, G, P}),
-    gproc:send({p, l, {introflection_websocket, ?WSBCAST}},
-               {self(), {introflection_websocket, ?WSBCAST},
-                introflection_event:encode(Event)}),
-    bulk_store(Events).
+bulk_store(ScenePid, [Event|Events]) ->
+    #{event := Type, data := Data} = Event,
+    store_event(ScenePid, Type, Data),
+    bulk_store(ScenePid, Events).
 
-encode(Data) ->
-    jiffy:encode(Data, [force_utf8]).
-
-add_modadd({ObjectId, Name, Nesting, Parent}) ->
+store_event(ScenePid, Type, #{object_id := O, name := N, nesting := G, parent := P})
+  when Type =:= ?MODULE_ADDED ->
     F = fun () ->
-        ok = introflection_module:add(ObjectId, Name, Nesting, Parent),
-        mnesia:write(#introflection_events{type=?MODULE_ADDED, ref=ObjectId})
+        ok = introflection_module:add(O, N, G, P),
+        introflection_scene:add_module(ScenePid, {O, N, G, P}),
+        mnesia:write(#introflection_events{type=?MODULE_ADDED, ref=O})
     end,
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.

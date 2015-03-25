@@ -1,4 +1,4 @@
-/*global Introflection,log,THREE*/
+/*global Introflection,log,THREE,THREEx*/
 
 Introflection.Module = function(event) {
 	var data = event.data;
@@ -13,9 +13,17 @@ Introflection.Module.prototype = {
 	constructor: Introflection.Module,
 
 	display: function(scene, count) {
-		log.debug(this);
-		var cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color: 'blue'}));
-		cube.position.x = 5*count + 5;
+		var dynamicTexture	= new THREEx.DynamicTexture(512,512);
+		dynamicTexture.clear('cyan');
+		dynamicTexture.drawText(this.name, 30, 50, 'black', "bold 55px Arial");
+
+
+		var cube = new THREE.Mesh(
+			new THREE.BoxGeometry(1, 1, 1),
+			new THREE.MeshLambertMaterial({map: dynamicTexture.texture})
+		);
+		cube.position.x = 5*count;
+		cube.position.y = 5*this.nesting;
 		scene.add(cube);
 	}
 };

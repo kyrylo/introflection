@@ -6,10 +6,10 @@
          init_per_testcase/2, end_per_testcase/2,
          all/0]).
 
--export([encode/1, modadds/1]).
+-export([modadds/1]).
 
 all() ->
-    [encode, modadds].
+    [modadds].
 
 %% ===================================================================
 %% Callback functions
@@ -38,16 +38,12 @@ end_per_testcase(_TestCase, _Config) ->
 %% Test functions
 %% ===================================================================
 
-encode(_Config) ->
-    <<"{\"data\":[116,101,115,116]}">>
-        = introflection_event:encode(#{data => "test"}).
-
 modadds(_Config) ->
     introflection_module:init([node()]),
     Ref = 20035120,
     Ref2 = 19950820,
-    ok = introflection_event:add_modadd({Ref, "Object", 0, 20035120}),
-    ok = introflection_event:add_modadd({Ref2, "Pry", 1, 20035120}),
+    ok = introflection_event:store_event({Ref, "Object", 0, 20035120}),
+    ok = introflection_event:store_event({Ref2, "Pry", 1, 20035120}),
     {Ref, "Object", 0, 20035120} = introflection_module:find(Ref),
     {Ref2, "Pry", 1, 20035120} = introflection_module:find(Ref2),
     [#{data := #{name := "Object", nesting := 0, object_id := 20035120,
