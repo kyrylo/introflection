@@ -2,8 +2,6 @@
 
 -behaviour(gen_event).
 
-%% API
-
 %% gen_server callbacks
 -export([init/1,
          handle_event/2,
@@ -13,14 +11,11 @@
          terminate/2]).
 
 -include("introflection.hrl").
+-include("otp_types.hrl").
 -include("logger.hrl").
 
 -record(state, {digraph,
                 orphans=[]}).
-
-%% ===================================================================
-%% API functions
-%% ===================================================================
 
 %% ===================================================================
 %% gen_server callbacks
@@ -45,11 +40,17 @@ handle_call(_Msg, State) ->
 handle_info(_Info, State) ->
     {ok, State}.
 
+-spec(code_change(term(), term(), term()) -> gs_code_change_reply()).
+
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 terminate(_Reason, _State) ->
     ok.
+
+%% ===================================================================
+%% Internal functions
+%% ===================================================================
 
 draw_edges(Module, State) ->
     Digraph = State#state.digraph,
@@ -89,7 +90,9 @@ link_children(Digraph, Orphans, {Parent, _N, _G, _Grandparent}) ->
     NewOrphans = Orphans -- Children,
     lists:foreach(fun({Child, _, _, _P}=ChildMod) ->
                       digraph:add_edge(Digraph, Child, Parent),
-                      {ok, NewOrphans} = link_children(Digraph, NewOrphans, ChildMod),
+                      {ok, NewOrphans} = link_children(Digraph,
+                                                       NewOrphans,
+                                                       ChildMod),
                       NewOrphans
                   end, Children),
     {ok, NewOrphans}.

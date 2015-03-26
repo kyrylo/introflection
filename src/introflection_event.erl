@@ -6,7 +6,7 @@
 
 -include_lib("stdlib/include/qlc.hrl").
 
--include("mnesia_tables.hrl").
+-include("tables.hrl").
 -include("events.hrl").
 -include("logger.hrl").
 
@@ -33,12 +33,13 @@ bulk_store(ScenePid, [Event|Events]) ->
     store_event(ScenePid, Type, Data),
     bulk_store(ScenePid, Events).
 
-store_event(ScenePid, Type, #{object_id := O, name := N, nesting := G, parent := P})
-  when Type =:= ?MODULE_ADDED ->
+store_event(ScenePid, Type, ModuleMap) when Type =:= ?MODULE_ADDED ->
     F = fun () ->
-        ok = introflection_module:add(O, N, G, P),
-        introflection_scene:add_module(ScenePid, {O, N, G, P}),
-        mnesia:write(#introflection_events{type=?MODULE_ADDED, ref=O})
+        Module = introflection_module:deannotate(ModuleMap),
+        {ObjectId,_,_,_} = Module,
+        ok = introflection_module:add(Module),
+        introflection_scene:add_module(ScenePid, Module),
+        mnesia:write(#introflection_events{type=?MODULE_ADDED, ref=ObjectId})
     end,
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.
