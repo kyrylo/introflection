@@ -3,9 +3,9 @@
 %% API
 -export([start_link/0, add_module/2]).
 
--include("logger.hrl").
-
 -type scene() :: pid().
+
+-export_type([scene/0]).
 
 %% ===================================================================
 %% API functions

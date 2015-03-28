@@ -8,6 +8,8 @@
 %% Supervisor callbacks
 -export([init/1]).
 
+-include("otp_types.hrl").
+
 -define(SERVER, ?MODULE).
 
 %% Helper macro for declaring children of supervisor
@@ -17,12 +19,16 @@
 %% API functions
 %% ===================================================================
 
+-spec start_link() -> sup_start_link_reply().
+
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
+
+-spec init(sup_args()) -> sup_init_reply().
 
 init([]) ->
     {ok, { {one_for_one, 5, 10},

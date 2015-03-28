@@ -10,7 +10,7 @@
 -export([init/1,
          install/1]).
 
--export_type([rmodule/0]).
+-export_type([rmodule/0, rmodule_map/0]).
 
 -include("tables.hrl").
 
@@ -22,14 +22,15 @@
 -type object_id() :: pos_integer().
 -type name() :: string().
 -type nesting() :: non_neg_integer().
--type rmodule() :: #introflection_modules{}.
+-type rmodule() :: {object_id(), name(), nesting(), object_id()}.
 -type rmodule_map() :: map().
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
--spec add(rmodule()) -> ok.
+-spec add(Module) -> ok when
+      Module :: rmodule().
 
 add({ObjectId, Name, Nesting, Parent}) ->
     F = fun() ->
@@ -40,6 +41,9 @@ add({ObjectId, Name, Nesting, Parent}) ->
     end,
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.
+
+-spec find(ObjectId) -> any() when
+      ObjectId :: object_id().
 
 find(ObjectId) ->
     F = fun() ->
@@ -53,7 +57,9 @@ find(ObjectId) ->
     {atomic, ResultOfFun} = mnesia:transaction(F),
     ResultOfFun.
 
--spec annotate(rmodule()) -> rmodule_map().
+-spec annotate(Module) -> ModuleMap when
+      Module :: rmodule(),
+      ModuleMap :: rmodule_map().
 
 annotate({ObjectId, Name, Nesting, Parent}) ->
     #{object_id => ObjectId,
@@ -61,7 +67,9 @@ annotate({ObjectId, Name, Nesting, Parent}) ->
       nesting => Nesting,
       parent => Parent}.
 
--spec deannotate(rmodule_map()) -> rmodule().
+-spec deannotate(ModuleMap) -> Module when
+     ModuleMap :: rmodule_map(),
+     Module :: rmodule().
 
 deannotate(ModuleMap) ->
     #{object_id := O, name := N, nesting := G, parent := P} = ModuleMap,

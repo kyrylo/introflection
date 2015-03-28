@@ -2,13 +2,14 @@
 
 -behaviour(supervisor).
 
--include("logger.hrl").
-
 %% API
 -export([start_link/0, start_socket/0]).
 
 %% Supervisor callbacks
 -export([init/1]).
+
+-include("otp_types.hrl").
+-include("logger.hrl").
 
 -define(SERVER, ?MODULE).
 -define(TCP_PORT, 7331).
@@ -20,12 +21,21 @@
 %%% API functions
 %%%===================================================================
 
+-spec start_link() -> sup_start_link_reply().
+
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+
+-spec start_socket() -> sup_start_child_reply().
+
+start_socket() ->
+    supervisor:start_child(?MODULE, []).
 
 %%%===================================================================
 %%% Supervisor callbacks
 %%%===================================================================
+
+-spec init(sup_args()) -> sup_init_reply().
 
 init([]) ->
     case gen_tcp:listen(?TCP_PORT, ?TCP_OPTIONS) of
@@ -42,12 +52,11 @@ init([]) ->
             {error, Reason}
     end.
 
-start_socket() ->
-    supervisor:start_child(?MODULE, []).
-
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec empty_listeners() -> ok.
 
 empty_listeners() ->
     [start_socket() || _ <- lists:seq(1, 1)],

@@ -21,9 +21,14 @@
 %% gen_server callbacks
 %% ===================================================================
 
+-spec init([]) -> {ok, #state{digraph :: digraph:graph(),
+                              orphans :: []}}.
+
 init([]) ->
     Digraph = digraph:new([acyclic]),
     {ok, #state{digraph=Digraph}}.
+
+-spec handle_event(ge_event(), ge_state()) -> {ok, #state{}}.
 
 handle_event({add_module, Module}, State) ->
     {ok, Orphans} = draw_edges(Module, State),
@@ -34,16 +39,22 @@ handle_event({add_module, Module}, State) ->
 handle_event(_From, State) ->
     {ok, State}.
 
+-spec handle_call(ge_request(), ge_state()) -> {ok, ok, #state{}}.
+
 handle_call(_Msg, State) ->
     {ok, ok, State}.
+
+-spec handle_info(ge_request(), ge_state()) -> {ok, #state{}}.
 
 handle_info(_Info, State) ->
     {ok, State}.
 
--spec(code_change(term(), term(), term()) -> gs_code_change_reply()).
+-spec code_change(term(), term(), term()) -> ge_code_change_reply().
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+-spec terminate(ge_terminate_reason(), ge_state()) -> ok.
 
 terminate(_Reason, _State) ->
     ok.
@@ -51,6 +62,11 @@ terminate(_Reason, _State) ->
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
+
+-spec draw_edges(Module, State) -> {ok, Orphans} when
+      Module :: introflection_module:rmodule(),
+      State :: ge_state(),
+      Orphans :: [Module].
 
 draw_edges(Module, State) ->
     Digraph = State#state.digraph,

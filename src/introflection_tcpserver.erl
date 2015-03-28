@@ -16,8 +16,6 @@
 -include("otp_types.hrl").
 -include("logger.hrl").
 
--define(SERVER, ?MODULE).
-
 -record(state, {socket,
                 scene_pid,
                 leftover=nil}).
@@ -26,7 +24,9 @@
 %% API functions
 %% ===================================================================
 
--spec(start_link(socket()) -> gs_init_reply()).
+-spec start_link(Socket) -> Result when
+      Socket :: socket(),
+      Result :: gs_start_link_reply().
 
 start_link(Socket) ->
     gen_server:start_link(?MODULE, Socket, []).
@@ -35,19 +35,19 @@ start_link(Socket) ->
 %% gen_server callbacks
 %% ===================================================================
 
--spec(init(gs_args()) -> gs_init_reply()).
+-spec init(gs_args()) -> {ok, #state{}}.
 
 init(Socket) ->
     ?INFO("Spawning a TCP server"),
     gen_server:cast(self(), accept),
     {ok, #state{socket=Socket}}.
 
--spec(handle_call(gs_request(), gs_from(), gs_reply()) -> gs_call_reply()).
+-spec handle_call(gs_request(), gs_from(), gs_reply()) -> {noreply, #state{}}.
 
 handle_call(_Request, _From, State) ->
     {noreply, State}.
 
--spec(handle_cast(gs_request(), gs_state()) -> gs_cast_reply()).
+-spec handle_cast(gs_request(), gs_state()) -> {noreply, #state{}}.
 
 handle_cast(accept, State = #state{socket=ListenSocket}) ->
     case gen_tcp:accept(ListenSocket) of
@@ -58,7 +58,7 @@ handle_cast(accept, State = #state{socket=ListenSocket}) ->
             {noreply, State#state{socket=AcceptSocket, scene_pid=ScenePid}};
         Other ->
             ?ERROR("Accept returned ~w. Aborting!~n", [Other]),
-            ok
+            {noreply, State}
     end;
 handle_cast({handle_events, Events}, State) ->
     ok = introflection_event:bulk_store(State#state.scene_pid, Events),
@@ -66,7 +66,8 @@ handle_cast({handle_events, Events}, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
--spec(handle_info(gs_request(), gs_state()) -> gs_info_reply()).
+-spec handle_info(gs_request(), gs_state()) -> {noreply, #state{}}
+                                             | {stop, normal, #state{}}.
 
 handle_info({tcp, Socket, Data}, State = #state{leftover=Rest}) when Rest /= nil ->
     {ok, NewState} = handle_streaming_data(<<Rest/binary, Data/binary>>, State),
@@ -85,12 +86,12 @@ handle_info({tcp_error, Socket, Reason}, State) ->
 handle_info(_Info, State) ->
     {noreply, State}.
 
--spec(terminate(terminate_reason(), gs_state()) -> ok).
+-spec terminate(gs_terminate_reason(), gs_state()) -> ok.
 
 terminate(_Reason, _State) ->
     ok.
 
--spec(code_change(term(), term(), term()) -> gs_code_change_reply()).
+-spec code_change(term(), term(), term()) -> {ok, #state{}}.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
@@ -98,6 +99,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
+
+-spec handle_streaming_data(Data, State) -> {ok, NewState} when
+      Data :: binary(),
+      State :: #state{},
+      NewState :: #state{}.
 
 handle_streaming_data(Data, State) ->
     {ok, {Events, Leftover}} = introflection_message:parse(Data),
