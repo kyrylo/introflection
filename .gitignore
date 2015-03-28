@@ -9,3 +9,4 @@ priv/node_modules
 logs
 *.beam
 .rebar
+*.plt
