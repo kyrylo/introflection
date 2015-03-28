@@ -14,6 +14,7 @@ deps:
 	$(REBAR) get-deps
 
 clean:
+	rm *.plt
 	$(REBAR) clean
 
 generate:
