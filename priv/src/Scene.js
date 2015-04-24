@@ -1,8 +1,6 @@
 /*global Introflection,log,THREE*/
 
 Introflection.Scene = function(ws) {
-
-
 	this.ws = ws;
 
 	this.scene = new THREE.Scene();
@@ -37,9 +35,8 @@ Introflection.Scene.prototype = {
 		this.renderer.setClearColor(0xAAAAAA, 1);
 		this.container.appendChild(this.renderer.domElement);
 
-
 		this.scene.add(this.ambientLight);
-		this.directionalLight.position.set(1, 1, 1).normalize();
+		this.directionalLight.position.set(0.3, 0.5, 0.7).normalize();
 		this.scene.add(this.directionalLight);
 
 		this.stats.start();

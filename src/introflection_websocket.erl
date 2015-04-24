@@ -2,6 +2,9 @@
 
 -behaviour(cowboy_websocket).
 
+%% Public exports
+-export([broadcast/1]).
+
 %% cowboy_websocket callbacks
 -export([init/2,
          websocket_handle/3,
@@ -20,6 +23,16 @@
 -type ws_handle_ret() ::
         {ok, cowboy_req:req(), {}}
       | {reply, {text,<<_:64,_:_*8>>}, cowboy_req:req(), {}}.
+
+%% ===================================================================
+%% API functions
+%% ===================================================================
+
+-spec broadcast(Term) -> ok when
+      Term :: term().
+
+broadcast(Term) ->
+    gproc:send({p, l, {?MODULE, ?WSBCAST}}, {self(), {?MODULE, ?WSBCAST}, Term}).
 
 %% ===================================================================
 %% cowboy_websocket callbacks
@@ -58,10 +71,10 @@ websocket_handle(_Data, Req, State) ->
                         {reply, {text, binary()}, cowboy_req:req(), {}}.
 
 websocket_info(post_init, Req, State) ->
-    MsgList = [{text, encode(Event) } || Event <- introflection_event:modadds()],
+    MsgList = [{text, encode(Event) } || Event <- introflection_event:chains()],
     {reply, MsgList, Req, State};
 websocket_info({_Pid, {_Module, ?WSBCAST}, Msg}, Req, State) ->
-    {reply, {text, Msg}, Req, State};
+    {reply, {text, encode(Msg)}, Req, State};
 websocket_info(_Info, Req, State) ->
     {ok, Req, State}.
 

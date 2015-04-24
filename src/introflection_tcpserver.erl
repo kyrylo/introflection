@@ -17,7 +17,7 @@
 -include("logger.hrl").
 
 -record(state, {socket,
-                scene_pid,
+                scene,
                 leftover=nil}).
 
 %% ===================================================================
@@ -54,14 +54,14 @@ handle_cast(accept, State = #state{socket=ListenSocket}) ->
         {ok, AcceptSocket} ->
             ?INFO("Socket ~p accepted a new TCP connection", [AcceptSocket]),
             introflection_tcpserver_sup:start_socket(),
-            {ok, ScenePid} = introflection_scene:start_link(),
-            {noreply, State#state{socket=AcceptSocket, scene_pid=ScenePid}};
+            {ok, Scene} = introflection_scene:start_link(),
+            {noreply, State#state{socket=AcceptSocket, scene=Scene}};
         Other ->
             ?ERROR("Accept returned ~w. Aborting!~n", [Other]),
             {noreply, State}
     end;
 handle_cast({handle_events, Events}, State) ->
-    ok = introflection_event:bulk_store(State#state.scene_pid, Events),
+    ok = introflection_event:process(State#state.scene, Events),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.

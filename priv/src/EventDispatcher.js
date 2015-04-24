@@ -2,22 +2,32 @@
 
 Introflection.EventDispatcher = function() {
 	this.scene = null;
-	this.count = 0;
+	this.moduleSpace = null;
 };
 
 Introflection.EventDispatcher.prototype = {
 	constructor: Introflection.EventDispatcher,
 
+	init: function(scene) {
+		this.scene = scene;
+		this.moduleSpace = new Introflection.ModuleSpace(this.scene);
+	},
+
 	dispatch: function(rawEvent) {
-		var event, module;
+		var event, module, modules;
 
 		event = JSON.parse(rawEvent.data);
 
 		switch (event.event) {
 		case 0:
-			module = new Introflection.Module(event);
-			module.display(this.scene, this.count);
-			this.count += 1;
+			module = new Introflection.Module(event.data);
+			this.moduleSpace.attachModule(module);
+			break;
+		case 1:
+			modules = event.data.map(function(datum) {
+				return new Introflection.Module(datum);
+			});
+			this.moduleSpace.addModuleChain(modules);
 			break;
 		}
 	}

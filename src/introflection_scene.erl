@@ -1,7 +1,10 @@
 -module(introflection_scene).
 
-%% API
--export([start_link/0, add_module/2]).
+%% Public exports
+-export([start_link/0,
+         add_module/2]).
+
+-include("logger.hrl").
 
 -type scene() :: pid().
 
@@ -16,7 +19,7 @@
 
 start_link() ->
     {ok, Pid} = gen_event:start_link(),
-    gen_event:add_handler(Pid, introflection_module_space, []),
+    ok = gen_event:add_handler(Pid, introflection_module_space, []),
     {ok, Pid}.
 
 -spec add_module(Scene, Module) -> ok when

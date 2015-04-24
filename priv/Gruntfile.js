@@ -21,6 +21,7 @@ module.exports = function(grunt) {
 					'src/Introflection.js',
 					'src/Grid.js',
 					'src/Module.js',
+					'src/ModuleSpace.js',
 					'src/EventDispatcher.js',
 					'src/WebSocketConnection.js',
 					'src/Stats.js',

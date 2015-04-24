@@ -1,0 +1,9 @@
+erlang:get_module_info/1
+erlang:get_module_info/2
+erlang:now/0
+erlang:pid_to_list/1
+erlang:whereis/1
+erlang:get_module_info/1
+erlang:get_module_info/2
+The specification for introflection_module_space:emit_chain/3 states that the function might also return 'ok' but the inferred return is 'not_ok'
+The pattern 'ok' can never match the type 'not_ok'

@@ -6,13 +6,15 @@ Introflection.WebSocketConnection = function(url) {
 	this.url = url;
 	this.subprotocol = 'ifproto';
 	this.dispatcher = new Introflection.EventDispatcher();
+
+	this.count = 0;
 };
 
 Introflection.WebSocketConnection.prototype = {
 	constructor: Introflection.WebSocketConnection,
 
 	start: function(scene) {
-		this.dispatcher.scene = scene;
+		this.dispatcher.init(scene);
 		var socket = new WebSocket(this.url, this.subprotocol);
 		this.setHandlers(socket);
 	},
@@ -53,6 +55,9 @@ Introflection.WebSocketConnection.prototype = {
 	setOnmessage: function(socket) {
 		var that = this;
 		socket.onmessage = function(event) {
+			that.count++;
+			log.debug(that.count);
+
 			that.dispatcher.dispatch(event);
 		};
 	}

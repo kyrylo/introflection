@@ -12,7 +12,7 @@ if [[ ! -f "deps.plt" ]];
 then
     rebar compile
     echo "Dialyzing dependencies"
-    dialyzer --add_to_plt --plt $HOME/.dialyzer_otp.plt --output_plt deps.plt -r deps/*/ebin/
+    dialyzer --add_to_plt --plt $HOME/.dialyzer_plt --output_plt deps.plt -r deps/*/ebin/
 fi
 
 rebar compile skip_deps=true
